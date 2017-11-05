@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/gfx">
+        <file>icons/btnExit.png</file>
+        <file>icons/btnFaster.png</file>
+        <file>icons/btnGo.png</file>
+        <file>icons/btnOpen.png</file>
+        <file>icons/btnPause.png</file>
+        <file>icons/btnResetSpeed.png</file>
+        <file>icons/btnSlower.png</file>
+        <file>icons/btnStop.png</file>
+        <file>icons/btnNextPlayListItem.png</file>
+        <file>icons/btnPrevPlaylistItem.png</file>
+    </qresource>
+</RCC>

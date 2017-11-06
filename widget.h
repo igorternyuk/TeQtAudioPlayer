@@ -20,9 +20,11 @@ class Widget : public QWidget
 public:
     explicit Widget(QWidget *parent = nullptr);
     ~Widget();
+
 protected:
     void keyReleaseEvent(QKeyEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
+
 private slots:
     void togglePause();
     void on_btnAdd_clicked();
@@ -31,13 +33,15 @@ private slots:
     void savePlaylistAs();
     void clearPlaylist();
     void removeSelectedTunes();
-    void on_action_remove_selected_tunes_from_playlist_triggered();
-    void on_actionClear_playlist_triggered();
     void updateVolumeLabel(int volume);
     void updateTimeLabels(qint64 pos);
     void updateSeekSliderValue(qint64 pos);
     void updatePlayerPos(int pos);
 
+    //Actions
+
+    void on_action_remove_selected_tunes_from_playlist_triggered();
+    void on_actionClear_playlist_triggered();
     void on_action_remove_selected_files_from_HDD_triggered();
 
 private:

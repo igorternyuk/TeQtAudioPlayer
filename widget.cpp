@@ -31,6 +31,7 @@ Widget::Widget(QWidget *parent) :
     ui->tableViewPlaylist->addAction(ui->action_remove_selected_tunes_from_playlist);
     ui->tableViewPlaylist->addAction(ui->actionClear_playlist);
     ui->tableViewPlaylist->addAction(ui->action_remove_selected_files_from_HDD);
+
     mPlayer = new QMediaPlayer(this);
     mPlaylist = new QMediaPlaylist(mPlayer);
     mPlayer->setPlaylist(mPlaylist);
@@ -83,7 +84,6 @@ Widget::Widget(QWidget *parent) :
     connect(ui->btnSeekForwards, &QToolButton::clicked, [this](){
         mPlayer->setPosition(mPlayer->position() + 5000);
     });
-
 
     connect(ui->tableViewPlaylist, &QTableView::doubleClicked, [this](const QModelIndex &index){
         mPlaylist->setCurrentIndex(index.row());
@@ -171,6 +171,14 @@ void Widget::keyReleaseEvent(QKeyEvent *event)
             ui->tableViewPlaylist->clearSelection();
             ui->tableViewPlaylist->selectRow(mCurrentIndex);
         }
+    }
+    else if(key == Qt::Key_Left)
+    {
+        mPlayer->setPosition(mPlayer->position() - 5000);
+    }
+    else if(key == Qt::Key_Right)
+    {
+        mPlayer->setPosition(mPlayer->position() + 5000);
     }
     else
     {
@@ -260,7 +268,7 @@ void Widget::savePlaylistAs()
                 QStandardPaths::MusicLocation).value(0, QDir::homePath());
     QString fileName = QFileDialog::getSaveFileName(
                 this,
-                QString::fromStdString("Save playlist ot file..."),
+                QString::fromStdString("Save playlist to file..."),
                 startLocation,
                 QString::fromStdString("Playlists (*.tpls);;All files (*.*)"));
     if(!fileName.contains(".tpls"))
@@ -336,10 +344,10 @@ void Widget::configurePlaylistView()
     ui->tableViewPlaylist->hideColumn(1); // Hide file path
     ui->tableViewPlaylist->verticalHeader()->setVisible(false); //Hide column numbers
     ui->tableViewPlaylist->setSelectionBehavior(QAbstractItemView::SelectRows);
-    ui->tableViewPlaylist->setSelectionMode(QAbstractItemView::MultiSelection); //Only one row can be selected
+    ui->tableViewPlaylist->setSelectionMode(QAbstractItemView::MultiSelection);
     ui->tableViewPlaylist->resizeColumnsToContents();
     ui->tableViewPlaylist->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    ui->tableViewPlaylist->horizontalHeader()->setStretchLastSection(true);
+    //ui->tableViewPlaylist->horizontalHeader()->setStretchLastSection(true);
     ui->tableViewPlaylist->setColumnWidth(1, ui->tableViewPlaylist->width());
 }
 
@@ -393,23 +401,29 @@ void Widget::updatePlayerPos(int pos)
 
 void Widget::on_action_remove_selected_files_from_HDD_triggered()
 {
-    QModelIndexList tunesToDelete = ui->tableViewPlaylist->
-            selectionModel()->selectedRows();
-    int counter{0};
-    while(!tunesToDelete.isEmpty())
+    QMessageBox::StandardButton reply =
+            QMessageBox::question(this, "Confirm deleting",
+                                  "Do you really want to delete\
+                                  selected movies from your HDD?",
+                                  QMessageBox::Yes | QMessageBox::No);
+    if(reply == QMessageBox::Yes)
     {
-        qDebug() << "counter = " << ++counter;
-        auto row = tunesToDelete.last().row();
-        mPlaylist->removeMedia(row);
-        QString path = mPlaylistModel->item(row, 1)->text();
-        mPlaylistModel->removeRows(row, 1);
-        tunesToDelete.removeLast();
-        QFile file(path);
-        if(file.exists())
+        auto tunesToDelete = ui->tableViewPlaylist->
+                             selectionModel()->selectedRows();
+        while(!tunesToDelete.isEmpty())
         {
-            if(!file.remove())
+            auto row = tunesToDelete.last().row();
+            mPlaylist->removeMedia(row);
+            QString path = mPlaylistModel->item(row, 1)->text();
+            mPlaylistModel->removeRows(row, 1);
+            tunesToDelete.removeLast();
+            QFile file(path);
+            if(file.exists())
             {
-                QMessageBox::critical(this, "Error", "Failed to remove");
+                if(!file.remove())
+                {
+                    QMessageBox::critical(this, "Error", "Failed to remove");
+                }
             }
         }
     }

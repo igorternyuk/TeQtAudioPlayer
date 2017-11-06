@@ -2,8 +2,6 @@
 #include <QApplication>
 #include <QDesktopWidget>
 
-///Надо сделать сохранение плейлиста и настроек
-/// при помощи QSettings
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);

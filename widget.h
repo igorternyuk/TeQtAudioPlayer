@@ -3,6 +3,8 @@
 
 #include <QWidget>
 #include <QString>
+#include <QList>
+#include <tuple>
 
 namespace Ui
 {
@@ -12,6 +14,8 @@ namespace Ui
 class QStandardItemModel;
 class QMediaPlayer;
 class QMediaPlaylist;
+class QTableView;
+class QSystemTrayIcon;
 
 class Widget : public QWidget
 {
@@ -25,10 +29,32 @@ protected:
     void keyReleaseEvent(QKeyEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
 
+private:    
+    const QString mLastPlaylistFilePath{"currentPlaylist.dat"};
+    Ui::Widget *ui;
+    QMediaPlayer *mPlayer;
+    QList<std::tuple<QStandardItemModel*, QMediaPlaylist*, QTableView*, int>> mLista;
+    enum { MODEL, PLAYLIST, VIEW, PLAYBACK_MODE };
+    int mCurrentlySelectedIndex{0};
+    QSystemTrayIcon *mTrayIcon;
+
+    QString getTextAt(QStandardItemModel *model, int row, int col);
+    void setValueAt(QStandardItemModel *model, int row, int col, const QVariant &value);
+    bool loadPlaylistFromFile(const QString &filePath);
+    bool loadPlaylistFromFile(int tab_index, const QString &filePath);
+    bool savePlaylistToFile(int index, const QString &filePath);
+    bool savePlaylistToFile(const QString &filePath);
+    void loadAllPlaylistsFromLastSession();
+    void saveAllPlaylistsFromCurrentSession();
+    void configurePlaylistView(int tab_index);
+    void configurePlaylistView();
+
 private slots:
+
+    void addNewPlaylist();
+    int create_new_playlist(const QString &title);
     void togglePause();
     void on_btnAdd_clicked();
-    void on_comboBoxPlaybackMode_currentIndexChanged(int index);
     void loadChoosenPlaylist();
     void savePlaylistAs();
     void clearPlaylist();
@@ -37,26 +63,26 @@ private slots:
     void updateTimeLabels(qint64 pos);
     void updateSeekSliderValue(qint64 pos);
     void updatePlayerPos(int pos);
+    void next_and_prev_track_slot();
 
     //Actions
 
     void on_action_remove_selected_tunes_from_playlist_triggered();
     void on_actionClear_playlist_triggered();
     void on_action_remove_selected_files_from_HDD_triggered();
-
-private:
-    const QString mLastPlaylistFilePath{"currentPlaylist.dat"};
-    Ui::Widget *ui;
-    QMediaPlayer *mPlayer;
-    QStandardItemModel *mPlaylistModel;
-    QMediaPlaylist *mPlaylist;
-    int mCurrentIndex{0};
-    QString getTextAt(QStandardItemModel *model, int row, int col);
-    void setValueAt(QStandardItemModel *model, int row, int col, const QVariant &value);
-    bool loadPlaylistFromFile(const QString &filePath);
-    bool savePlaylistToFile(const QString &filePath);
-    void configurePlaylistView();
-
+    void on_tabWidget_tabCloseRequested(int index);
+    void on_comboBoxPlaybackMode_currentIndexChanged(int index);
+    void on_action_add_music_triggered();
+    void on_action_rename_playlist_triggered();
+    void on_btnQuit_clicked();
+    void on_action_add_music_from_other_playlist_triggered();
+    void on_action_open_music_triggered();
+    void on_action_prevous_track_triggered();
+    void on_action_play_triggered();
+    void on_action_pause_triggered();
+    void on_action_stop_triggered();
+    void on_action_next_track_triggered();
+    void on_action_quit_triggered();
 };
 
 #endif // WIDGET_H

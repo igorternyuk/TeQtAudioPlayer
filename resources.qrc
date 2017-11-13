@@ -10,5 +10,7 @@
         <file>icons/btnStop.png</file>
         <file>icons/btnNextPlayListItem.png</file>
         <file>icons/btnPrevPlaylistItem.png</file>
+        <file>icons/btnNewPlaylist.png</file>
+        <file>icons/trayIcon.png</file>
     </qresource>
 </RCC>

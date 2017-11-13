@@ -19,7 +19,7 @@
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_3">
        <item>
-        <spacer name="horizontalSpacer_6">
+        <spacer name="horizontalSpacer">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
@@ -32,7 +32,38 @@
         </spacer>
        </item>
        <item>
+        <widget class="QToolButton" name="btnAdd">
+         <property name="toolTip">
+          <string>Open audio files</string>
+         </property>
+         <property name="text">
+          <string>...</string>
+         </property>
+         <property name="icon">
+          <iconset resource="resources.qrc">
+           <normaloff>:/gfx/icons/btnOpen.png</normaloff>:/gfx/icons/btnOpen.png</iconset>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QToolButton" name="btnNewPlayList">
+         <property name="toolTip">
+          <string>Create new playlist</string>
+         </property>
+         <property name="text">
+          <string>...</string>
+         </property>
+         <property name="icon">
+          <iconset resource="resources.qrc">
+           <normaloff>:/gfx/icons/btnNewPlaylist.png</normaloff>:/gfx/icons/btnNewPlaylist.png</iconset>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QToolButton" name="btnPlay">
+         <property name="toolTip">
+          <string>Play</string>
+         </property>
          <property name="text">
           <string>...</string>
          </property>
@@ -44,6 +75,9 @@
        </item>
        <item>
         <widget class="QToolButton" name="btnPause">
+         <property name="toolTip">
+          <string>Pause</string>
+         </property>
          <property name="text">
           <string>...</string>
          </property>
@@ -55,6 +89,9 @@
        </item>
        <item>
         <widget class="QToolButton" name="btnStop">
+         <property name="toolTip">
+          <string>Stop</string>
+         </property>
          <property name="text">
           <string>...</string>
          </property>
@@ -65,18 +102,10 @@
         </widget>
        </item>
        <item>
-        <widget class="QToolButton" name="btnAdd">
-         <property name="text">
-          <string>...</string>
-         </property>
-         <property name="icon">
-          <iconset resource="resources.qrc">
-           <normaloff>:/gfx/icons/btnOpen.png</normaloff>:/gfx/icons/btnOpen.png</iconset>
-         </property>
-        </widget>
-       </item>
-       <item>
         <widget class="QToolButton" name="btnPrev">
+         <property name="toolTip">
+          <string>Prevoius track</string>
+         </property>
          <property name="text">
           <string>...</string>
          </property>
@@ -88,6 +117,9 @@
        </item>
        <item>
         <widget class="QToolButton" name="btnNext">
+         <property name="toolTip">
+          <string>Next track</string>
+         </property>
          <property name="text">
           <string>...</string>
          </property>
@@ -99,6 +131,9 @@
        </item>
        <item>
         <widget class="QToolButton" name="btnSeekBackwards">
+         <property name="toolTip">
+          <string>Seek backwards</string>
+         </property>
          <property name="text">
           <string>...</string>
          </property>
@@ -110,6 +145,9 @@
        </item>
        <item>
         <widget class="QToolButton" name="btnSeekForwards">
+         <property name="toolTip">
+          <string>Seek forwards</string>
+         </property>
          <property name="text">
           <string>...</string>
          </property>
@@ -161,7 +199,7 @@
         <widget class="QComboBox" name="comboBoxPlaybackMode"/>
        </item>
        <item>
-        <spacer name="horizontalSpacer">
+        <spacer name="horizontalSpacer_6">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
@@ -261,7 +299,11 @@
       </widget>
      </item>
      <item>
-      <widget class="QTableView" name="tableViewPlaylist"/>
+      <widget class="QTabWidget" name="tabWidget">
+       <property name="tabsClosable">
+        <bool>true</bool>
+       </property>
+      </widget>
      </item>
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -312,7 +354,7 @@
        <item>
         <widget class="QPushButton" name="btnLoadPlaylist">
          <property name="text">
-          <string>Load playlist</string>
+          <string>Append music from other playlist</string>
          </property>
         </widget>
        </item>
@@ -364,27 +406,88 @@
     <string>remove selected files from HDD</string>
    </property>
   </action>
+  <action name="action_rename_playlist">
+   <property name="text">
+    <string>Rename playlist</string>
+   </property>
+  </action>
+  <action name="action_add_music">
+   <property name="text">
+    <string>Add audio files</string>
+   </property>
+  </action>
+  <action name="action_add_music_from_other_playlist">
+   <property name="text">
+    <string>Add music from other playlist</string>
+   </property>
+  </action>
+  <action name="action_open_music">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/gfx/icons/btnOpen.png</normaloff>:/gfx/icons/btnOpen.png</iconset>
+   </property>
+   <property name="text">
+    <string>Open music</string>
+   </property>
+  </action>
+  <action name="action_prevous_track">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/gfx/icons/btnPrevPlaylistItem.png</normaloff>:/gfx/icons/btnPrevPlaylistItem.png</iconset>
+   </property>
+   <property name="text">
+    <string>Prevous track</string>
+   </property>
+  </action>
+  <action name="action_play">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/gfx/icons/btnGo.png</normaloff>:/gfx/icons/btnGo.png</iconset>
+   </property>
+   <property name="text">
+    <string>Play</string>
+   </property>
+  </action>
+  <action name="action_pause">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/gfx/icons/btnPause.png</normaloff>:/gfx/icons/btnPause.png</iconset>
+   </property>
+   <property name="text">
+    <string>Pause</string>
+   </property>
+  </action>
+  <action name="action_stop">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/gfx/icons/btnStop.png</normaloff>:/gfx/icons/btnStop.png</iconset>
+   </property>
+   <property name="text">
+    <string>Stop</string>
+   </property>
+  </action>
+  <action name="action_next_track">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/gfx/icons/btnNextPlayListItem.png</normaloff>:/gfx/icons/btnNextPlayListItem.png</iconset>
+   </property>
+   <property name="text">
+    <string>Next track</string>
+   </property>
+  </action>
+  <action name="action_quit">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/gfx/icons/btnExit.png</normaloff>:/gfx/icons/btnExit.png</iconset>
+   </property>
+   <property name="text">
+    <string>Quit</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources>
   <include location="resources.qrc"/>
  </resources>
- <connections>
-  <connection>
-   <sender>btnQuit</sender>
-   <signal>clicked()</signal>
-   <receiver>Widget</receiver>
-   <slot>close()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>413</x>
-     <y>301</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>551</x>
-     <y>344</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>

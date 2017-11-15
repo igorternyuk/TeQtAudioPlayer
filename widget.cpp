@@ -5,7 +5,6 @@
 #include <QStandardPaths>
 #include <QMediaPlayer>
 #include <QStringList>
-#include <QList>
 #include <QFileDialog>
 #include <QDir>
 #include <QFile>
@@ -21,8 +20,10 @@
 #include <QTabWidget>
 #include <QSystemTrayIcon>
 #include <QMenu>
+#include "settingsuntil.h"
+#ifdef DEBUG
 #include <QDebug>
-
+#endif
 Widget::Widget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::Widget)
@@ -100,12 +101,12 @@ Widget::Widget(QWidget *parent) :
         ui->comboBoxPlaybackMode->setCurrentIndex(std::get<PLAYBACK_MODE>(mLista.at(index)));
     });
 
-    loadAllPlaylistsFromLastSession();
+    load_previous_session();
 }
 
 Widget::~Widget()
 {
-    saveAllPlaylistsFromCurrentSession();
+    save_current_session();
     delete mPlayer;
     delete ui;
 }
@@ -121,14 +122,24 @@ void Widget::keyReleaseEvent(QKeyEvent *event)
     if(key == Qt::Key_Return)
     {
         auto selectedRows = tv->selectionModel()->selectedRows();
-        if(selectedRows.size() == 1)
+        if(mPlayer->playlist() != std::get<PLAYLIST>(mLista.at(index)))
         {
-            pls->setCurrentIndex(selectedRows.at(0).row());
-            if(mPlayer->state() != QMediaPlayer::PlayingState)
-            {
-                mPlayer->play();
-            }
+            mIsPlaylistSwitched = true;
+            mPlayer->setPlaylist(std::get<PLAYLIST>(mLista.at(index)));
+            //qDebug() << "Playlist has changed";
+            //mPlayer->playlist()->setCurrentIndex(selectedRows.at(0).row());
         }
+        else
+        {
+            //qDebug() << "Playlist has not changed";
+            mIsPlaylistSwitched = false;
+        }
+
+        if(selectedRows.size() > 0)
+            pls->setCurrentIndex(selectedRows.at(0).row());
+
+        if(mPlayer->state() != QMediaPlayer::PlayingState)
+            mPlayer->play();
     }
     else if(key == Qt::Key_Delete)
     {
@@ -323,7 +334,7 @@ bool Widget::savePlaylistToFile(int index, const QString &filePath)
     }
     QTextStream stream(&file);
     auto pls_model = std::get<MODEL>(mLista.at(index));
-    for(int row{1}; row < pls_model->rowCount(); ++row)
+    for(int row{0}; row < pls_model->rowCount(); ++row)
     {
         stream << pls_model->item(row, 0)->text() << "*" <<
                 pls_model->item(row, 1)->text() << endl;
@@ -369,7 +380,8 @@ void Widget::saveAllPlaylistsFromCurrentSession()
         {
             auto path = ui->tabWidget->tabText(i);
             stream << path;
-            if(i != ui->tabWidget->count() - 1) stream << "*";
+            if(i != ui->tabWidget->count() - 1)
+                stream << "*";
             savePlaylistToFile(i, path);
         }
         fileWithPlaylistTitles.close();
@@ -382,8 +394,9 @@ void Widget::configurePlaylistView(int tab_index)
     auto pls_model = std::get<MODEL>(mLista.at(tab_index));
     QTableView *pls_view = std::get<VIEW>(mLista.at(tab_index));
     QStringList headers;
-    headers << tr("Tune") << tr("File path");
-    pls_model->setHorizontalHeaderLabels(headers);
+    //headers << tr("Tune") << tr("File path");
+    //pls_model->setHorizontalHeaderLabels(headers);
+    pls_view->horizontalHeader()->setVisible(false);
     pls_view->hideColumn(1); // Hide file path
     pls_view->verticalHeader()->setVisible(false); //Hide column numbers
     pls_view->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -392,12 +405,74 @@ void Widget::configurePlaylistView(int tab_index)
     pls_view->setEditTriggers(QAbstractItemView::NoEditTriggers);
     pls_view->setColumnWidth(1, pls_view->width());
     pls_view->verticalHeader()->setVisible(true);
+    pls_view->setGridStyle(Qt::PenStyle::NoPen);
 }
 
 void Widget::configurePlaylistView()
 {
     auto tab_index = ui->tabWidget->currentIndex();
     configurePlaylistView(tab_index);
+}
+
+void Widget::save_current_session()
+{
+    saveAllPlaylistsFromCurrentSession();
+    saveParameter(mSKeys[SettingsKey::WINDOW_SIZE], this->size(),
+                  mWindowSettings);
+    saveParameter(mSKeys[SettingsKey::WINDOW_POS], this->pos(),
+                  mWindowSettings);
+    saveParameter(mSKeys[SettingsKey::VOLUME_LEVEL], ui->volumeSlider->value(),
+                  mPlayerSettings);
+    saveParameter(mSKeys[SettingsKey::PLAYER_POS], mPlayer->position(),
+                  mPlayerSettings);
+    saveParameter(mSKeys[SettingsKey::CURRENT_TAB], ui->tabWidget->currentIndex(),
+                  mPlayerSettings);
+    saveParameter(mSKeys[SettingsKey::CURRENT_TRACK_IN_PLAYLIST],
+                  mPlayer->playlist()->currentIndex(),
+                  mPlayerSettings);
+}
+
+void Widget::load_previous_session()
+{
+    loadAllPlaylistsFromLastSession();
+    auto size = loadParameter(mSKeys[SettingsKey::WINDOW_SIZE],
+                              mWindowSettings,
+                              this->size()).value<QSize>();
+    this->resize(size);
+    auto pos = loadParameter(mSKeys[SettingsKey::WINDOW_POS],
+                             mWindowSettings,
+                             this->pos()).value<QPoint>();
+    this->move(pos);
+    bool vol_ok { false };
+    auto volLevel = loadParameter(mSKeys[SettingsKey::VOLUME_LEVEL],
+                                  mPlayerSettings,
+                                  50).toInt(&vol_ok);
+    if(vol_ok) ui->volumeSlider->setValue(volLevel);
+    bool tab_ok { false };
+    auto tab_index = loadParameter(mSKeys[SettingsKey::CURRENT_TAB],
+                                   mPlayerSettings, 0).toInt(&tab_ok);
+    if(tab_ok && tab_index >= 0 && tab_index < ui->tabWidget->count())
+    {
+        ui->tabWidget->setCurrentIndex(tab_index);
+        bool track_ok { false };
+        auto curr_pls = std::get<PLAYLIST>(mLista.at(tab_index));
+        auto pls_index = loadParameter(mSKeys[SettingsKey::CURRENT_TRACK_IN_PLAYLIST],
+                                       mPlayerSettings,0).toInt(&track_ok);
+        if(track_ok && pls_index >= 0 && pls_index < curr_pls->mediaCount())
+        {
+
+            bool player_pos_ok { false };
+            auto player_pos = loadParameter(mSKeys[SettingsKey::PLAYER_POS],
+                                            mPlayerSettings,0).toInt(&player_pos_ok);
+            if(player_pos_ok)
+            {
+                mPlayer->setPlaylist(curr_pls);
+                curr_pls->setCurrentIndex(pls_index);
+                mPlayer->setPosition(player_pos);
+                mPlayer->play();
+            }
+        }
+    }
 }
 
 void Widget::addNewPlaylist()
@@ -425,7 +500,8 @@ int Widget::create_new_playlist(const QString &title)
     tv->setModel(pm);
     QMediaPlaylist *pls = new QMediaPlaylist(mPlayer);
     pls->setPlaybackMode(QMediaPlaylist::Loop);
-    mLista.append(std::make_tuple(pm, pls, tv, 0));
+    mLista.append({pm, pls, tv, 0});
+    //mLista.append(std::make_tuple(pm, pls, tv, 0));
     QVBoxLayout *l = new QVBoxLayout(widget);
     l->addWidget(tv);
     widget->setLayout(l);
@@ -435,7 +511,15 @@ int Widget::create_new_playlist(const QString &title)
             [this, pls, tv](const QModelIndex &index){
                 auto tab_index = ui->tabWidget->currentIndex();
                 if(tab_index == -1) return;
-                mPlayer->setPlaylist(std::get<PLAYLIST>(mLista.at(tab_index)));
+                if(mPlayer->playlist() != std::get<PLAYLIST>(mLista.at(tab_index)))
+                {
+                    mPlayer->setPlaylist(std::get<PLAYLIST>(mLista.at(tab_index)));
+                    mIsPlaylistSwitched = true;
+                }
+                else
+                {
+                    mIsPlaylistSwitched = false;
+                }
                 mCurrentlySelectedIndex = index.row();
                 pls->setCurrentIndex(index.row());
                 tv->clearSelection();
@@ -452,7 +536,15 @@ int Widget::create_new_playlist(const QString &title)
                 tv->clearSelection();
                 tv->selectRow(row);
                 ui->lblCurrentTrack->setText(title);
+                if(!mIsPlaylistSwitched)
+                {
+                    mTrayIcon->showMessage("Now playing", title,
+                                           QSystemTrayIcon::Information,
+                                           3000);
+                }
     });
+
+
 
     auto index = ui->tabWidget->indexOf(widget);
     ui->tabWidget->setCurrentIndex(index);

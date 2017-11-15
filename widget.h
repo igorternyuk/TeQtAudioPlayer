@@ -5,6 +5,7 @@
 #include <QString>
 #include <QList>
 #include <tuple>
+#include <QMap>
 
 namespace Ui
 {
@@ -30,13 +31,36 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
 
 private:    
-    const QString mLastPlaylistFilePath{"currentPlaylist.dat"};
+    const QString mLastPlaylistFilePath{ "currentPlaylist.dat" };
     Ui::Widget *ui;
     QMediaPlayer *mPlayer;
     QList<std::tuple<QStandardItemModel*, QMediaPlaylist*, QTableView*, int>> mLista;
     enum { MODEL, PLAYLIST, VIEW, PLAYBACK_MODE };
     int mCurrentlySelectedIndex{0};
     QSystemTrayIcon *mTrayIcon;
+    bool mIsPlaylistSwitched { true };
+    const QString mWindowSettings { "WindowSettings" };
+    const QString mPlayerSettings { "PlayerSettings" };
+    enum class SettingsKey
+    {
+        WINDOW_SIZE,
+        WINDOW_POS,
+        VOLUME_LEVEL,
+        PLAYER_POS,
+        CURRENT_TAB,
+        CURRENT_TRACK_IN_PLAYLIST
+    };
+
+    QMap<SettingsKey, QString> mSKeys
+    {
+        { SettingsKey::WINDOW_SIZE, "WindowSize" },
+        { SettingsKey::WINDOW_POS, "WindowPos" },
+        { SettingsKey::VOLUME_LEVEL, "VolumeLevel" },
+        { SettingsKey::PLAYER_POS, "SeekSliderValue" },
+        { SettingsKey::CURRENT_TAB, "CurrentTabIndex" },
+        { SettingsKey::CURRENT_TRACK_IN_PLAYLIST, "CurrentTrack"}
+    };
+
 
     QString getTextAt(QStandardItemModel *model, int row, int col);
     void setValueAt(QStandardItemModel *model, int row, int col, const QVariant &value);
@@ -48,6 +72,8 @@ private:
     void saveAllPlaylistsFromCurrentSession();
     void configurePlaylistView(int tab_index);
     void configurePlaylistView();
+    void save_current_session();
+    void load_previous_session();
 
 private slots:
 

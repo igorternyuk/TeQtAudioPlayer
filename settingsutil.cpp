@@ -1,4 +1,4 @@
-#include "settingsuntil.h"
+#include "settingsutil.h"
 
 void saveParameter(const QString &key, const QVariant &value, const QString &group)
 {

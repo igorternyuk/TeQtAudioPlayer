@@ -1,6 +1,6 @@
 #include "widget.h"
 #include "ui_widget.h"
-#include "settingsuntil.h"
+#include "settingsutil.h"
 #include <QStandardItemModel>
 #include <QMediaPlaylist>
 #include <QStandardPaths>

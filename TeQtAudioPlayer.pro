@@ -18,7 +18,7 @@ SOURCES += main.cpp\
     settingsutil.cpp
 
 HEADERS  += widget.h \
-    settingsuntil.h
+    settingsutil.h
 
 FORMS    += widget.ui
 

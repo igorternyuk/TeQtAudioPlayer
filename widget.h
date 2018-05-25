@@ -29,6 +29,10 @@ public:
 protected:
     void keyReleaseEvent(QKeyEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
+    void dragEnterEvent(QDragEnterEvent *event);
+    void dragLeaveEvent(QDragLeaveEvent *event);
+    void dragMoveEvent(QDragMoveEvent *event);
+    void dropEvent(QDropEvent *event);
 
 private:    
     const QString mLastPlaylistFilePath{ "currentPlaylist.dat" };
@@ -90,6 +94,7 @@ private slots:
     void updateSeekSliderValue(qint64 pos);
     void updatePlayerPos(int pos);
     void next_and_prev_track_slot();
+    void addListOfMusic(QStringList &tunes);
 
     //Actions
 

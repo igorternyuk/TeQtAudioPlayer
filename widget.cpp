@@ -1,5 +1,6 @@
 #include "widget.h"
 #include "ui_widget.h"
+#include "settingsuntil.h"
 #include <QStandardItemModel>
 #include <QMediaPlaylist>
 #include <QStandardPaths>
@@ -20,15 +21,21 @@
 #include <QTabWidget>
 #include <QSystemTrayIcon>
 #include <QMenu>
-#include "settingsuntil.h"
+#include <QMimeData>
+#include <QDragEnterEvent>
+#include <QDragLeaveEvent>
+#include <QDragMoveEvent>
+#include <QDropEvent>
 #ifdef DEBUG
 #include <QDebug>
 #endif
+
 Widget::Widget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::Widget)
 {
     ui->setupUi(this);
+    setAcceptDrops(true); //Drag&drop
     this->setWindowTitle("TeAudioPlayer");
     mPlayer = new QMediaPlayer(this);
     mPlayer->setVolume(50);
@@ -203,6 +210,40 @@ void Widget::wheelEvent(QWheelEvent *event)
         QWidget::wheelEvent(event);
 }
 
+void Widget::dragEnterEvent(QDragEnterEvent *event)
+{
+    event->accept();
+}
+
+void Widget::dragLeaveEvent(QDragLeaveEvent *event)
+{
+    event->accept();
+}
+
+void Widget::dragMoveEvent(QDragMoveEvent *event)
+{
+    event->accept();
+}
+
+void Widget::dropEvent(QDropEvent *event)
+{
+    QStringList extensions = {"mp3", "wav", "ogg"};
+    auto data = event->mimeData();
+    auto urls = data->urls();
+    QStringList list;
+    for(auto url: urls)
+    {
+        if(url.isLocalFile())
+        {
+            auto file = url.toLocalFile();
+            QFileInfo info(file);
+            if(!info.isDir() && extensions.contains(info.suffix()))
+                list << url.toLocalFile();
+        }
+    }
+    addListOfMusic(list);
+}
+
 void Widget::togglePause()
 {
     if(mPlayer->state() == QMediaPlayer::PlayingState)
@@ -223,18 +264,7 @@ void Widget::on_btnAdd_clicked()
     QStringList tunes = QFileDialog::getOpenFileNames(this, "Open a tunes", dir,
                                                   "Audio files (*.mp3 *.ogg *\
                                                   *.wav);;All files (*.*)");
-    auto tab_index = ui->tabWidget->currentIndex();
-    if(tab_index == -1) return;
-    auto pls_model = std::get<MODEL>(mLista.at(tab_index));
-    auto pls = std::get<PLAYLIST>(mLista.at(tab_index));
-    for(const auto &tune: tunes){
-        QList<QStandardItem*> items;
-        items.append(new QStandardItem(QDir(tune).dirName()));
-        items.append(new QStandardItem(tune));
-        pls_model->appendRow(items);
-        pls->addMedia(QUrl::fromLocalFile(tune));
-    }
-    configurePlaylistView(tab_index);
+    addListOfMusic(tunes);
 }
 
 void Widget::loadChoosenPlaylist()
@@ -308,15 +338,13 @@ bool Widget::loadPlaylistFromFile(int tab_index, const QString &filePath)
     QTextStream stream(&file);
 
     while (!stream.atEnd()) {
-        QString tuneData = stream.readLine();
-        QList campos = tuneData.split("*");
+        QString tuneTitle = stream.readLine();
+        QString tunePath = stream.readLine();
         QList<QStandardItem*> list;
-        for(const auto &campo: campos)
-        {
-            list.append(new QStandardItem(campo));
-        }
+        list.append(new QStandardItem(tuneTitle));
+        list.append(new QStandardItem(tunePath));
         pls_model->appendRow(list);
-        pls->addMedia(QUrl::fromLocalFile(campos.at(1)));
+        pls->addMedia(QUrl::fromLocalFile(tunePath));
 
     }
     file.close();
@@ -336,7 +364,7 @@ bool Widget::savePlaylistToFile(int index, const QString &filePath)
     auto pls_model = std::get<MODEL>(mLista.at(index));
     for(int row{0}; row < pls_model->rowCount(); ++row)
     {
-        stream << pls_model->item(row, 0)->text() << "*" <<
+        stream << pls_model->item(row, 0)->text() << "\n" <<
                 pls_model->item(row, 1)->text() << endl;
     }
     file.close();
@@ -352,19 +380,24 @@ bool Widget::savePlaylistToFile(const QString &filePath)
 
 void Widget::loadAllPlaylistsFromLastSession()
 {
-    QFile fileWithPlaylistTitles("playlists.txt");
+    if(!QDir(".lastSession").exists())
+    {
+        QDir().mkdir(".lastSession");
+    }
+    QFile fileWithPlaylistTitles(".lastSession/playlists.data");
     if(fileWithPlaylistTitles.open(QIODevice::ReadOnly | QIODevice::Text))
     {
+
         QTextStream stream(&fileWithPlaylistTitles);
-        QStringList playlist_files = stream.readAll().split("*");
-        for(const auto &path: playlist_files)
+        while(!stream.atEnd())
         {
-            QFileInfo fileInfo(path);
+            auto currPath = stream.readLine();
+            QFileInfo fileInfo(currPath);
             QString name = fileInfo.fileName();
             if(fileInfo.exists())
             {
                 auto index = this->create_new_playlist(name);
-                this->loadPlaylistFromFile(index, path);
+                this->loadPlaylistFromFile(index, currPath);
             }
         }
     }
@@ -372,16 +405,19 @@ void Widget::loadAllPlaylistsFromLastSession()
 
 void Widget::saveAllPlaylistsFromCurrentSession()
 {
-    QFile fileWithPlaylistTitles("playlists.txt");
+    if(!QDir(".lastSession").exists())
+    {
+        QDir().mkdir(".lastSession");
+    }
+    QFile fileWithPlaylistTitles(".lastSession/playlists.data");
     if(fileWithPlaylistTitles.open(QIODevice::WriteOnly))
     {
         QTextStream stream(&fileWithPlaylistTitles);
         for(int i {0}; i < ui->tabWidget->count(); ++i)
         {
             auto path = ui->tabWidget->tabText(i);
-            stream << path;
-            if(i != ui->tabWidget->count() - 1)
-                stream << "*";
+            path = QString(".lastSession/%1").arg(path);
+            stream << path << "\n";
             savePlaylistToFile(i, path);
         }
         fileWithPlaylistTitles.close();
@@ -391,11 +427,11 @@ void Widget::saveAllPlaylistsFromCurrentSession()
 void Widget::configurePlaylistView(int tab_index)
 {
     if(tab_index == -1) return;
-    auto pls_model = std::get<MODEL>(mLista.at(tab_index));
     QTableView *pls_view = std::get<VIEW>(mLista.at(tab_index));
     QStringList headers;
-    //headers << tr("Tune") << tr("File path");
-    //pls_model->setHorizontalHeaderLabels(headers);
+    headers << tr("Tune") << tr("File path");
+    auto pls_model = std::get<MODEL>(mLista.at(tab_index));
+    pls_model->setHorizontalHeaderLabels(headers);
     pls_view->horizontalHeader()->setVisible(false);
     pls_view->hideColumn(1); // Hide file path
     pls_view->verticalHeader()->setVisible(false); //Hide column numbers
@@ -403,7 +439,7 @@ void Widget::configurePlaylistView(int tab_index)
     pls_view->setSelectionMode(QAbstractItemView::MultiSelection);
     pls_view->resizeColumnsToContents();
     pls_view->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    pls_view->setColumnWidth(1, pls_view->width());
+    pls_view->setColumnWidth(1, pls_view->width() - 5);
     pls_view->verticalHeader()->setVisible(true);
     pls_view->setGridStyle(Qt::PenStyle::NoPen);
 }
@@ -501,7 +537,6 @@ int Widget::create_new_playlist(const QString &title)
     QMediaPlaylist *pls = new QMediaPlaylist(mPlayer);
     pls->setPlaybackMode(QMediaPlaylist::Loop);
     mLista.append({pm, pls, tv, 0});
-    //mLista.append(std::make_tuple(pm, pls, tv, 0));
     QVBoxLayout *l = new QVBoxLayout(widget);
     l->addWidget(tv);
     widget->setLayout(l);
@@ -543,7 +578,6 @@ int Widget::create_new_playlist(const QString &title)
                                            3000);
                 }
     });
-
 
 
     auto index = ui->tabWidget->indexOf(widget);
@@ -590,8 +624,8 @@ void Widget::updateTimeLabels(qint64 pos)
 
 void Widget::updateSeekSliderValue(qint64 pos)
 {
-    ui->seekSlider->setValue(
-                static_cast<int>(static_cast<float>(pos) / mPlayer->duration() * 100));
+    ui->seekSlider->setValue(static_cast<int>(static_cast<float>(pos) /
+                                              mPlayer->duration() * 100));
 }
 
 void Widget::updatePlayerPos(int pos)
@@ -614,6 +648,22 @@ void Widget::next_and_prev_track_slot()
     auto index = pls->currentIndex();
     pls_view->clearSelection();
     pls_view->selectRow(index);
+}
+
+void Widget::addListOfMusic(QStringList &tunes)
+{
+    auto currTabIndex = ui->tabWidget->currentIndex();
+    if(currTabIndex == -1) return;
+    auto pls_model = std::get<MODEL>(mLista.at(currTabIndex));
+    auto pls = std::get<PLAYLIST>(mLista.at(currTabIndex));
+    for(const auto &tune: tunes){
+        QList<QStandardItem*> items;
+        items.append(new QStandardItem(QDir(tune).dirName()));
+        items.append(new QStandardItem(tune));
+        pls_model->appendRow(items);
+        pls->addMedia(QUrl::fromLocalFile(tune));
+    }
+    configurePlaylistView(currTabIndex);
 }
 
 void Widget::on_action_remove_selected_files_from_HDD_triggered()
@@ -676,23 +726,23 @@ void Widget::on_comboBoxPlaybackMode_currentIndexChanged(int index)
     auto pls = std::get<PLAYLIST>(mLista.at(tab_index));
     std::get<PLAYBACK_MODE>(mLista[tab_index]) = index;
     switch (index) {
-    case 0:
-        pls->setPlaybackMode(QMediaPlaylist::Loop);
-        break;
-    case 1:
-        pls->setPlaybackMode(QMediaPlaylist::CurrentItemInLoop);
-        break;
-    case 2:
-        pls->setPlaybackMode(QMediaPlaylist::CurrentItemOnce);
-        break;
-    case 3:
-        pls->setPlaybackMode(QMediaPlaylist::Sequential);
-        break;
-    case 4:
-        pls->setPlaybackMode(QMediaPlaylist::Random);
-        break;
-    default:
-        break;
+        case 0:
+            pls->setPlaybackMode(QMediaPlaylist::Loop);
+            break;
+        case 1:
+            pls->setPlaybackMode(QMediaPlaylist::CurrentItemInLoop);
+            break;
+        case 2:
+            pls->setPlaybackMode(QMediaPlaylist::CurrentItemOnce);
+            break;
+        case 3:
+            pls->setPlaybackMode(QMediaPlaylist::Sequential);
+            break;
+        case 4:
+            pls->setPlaybackMode(QMediaPlaylist::Random);
+            break;
+        default:
+            break;
     }
 }
 
@@ -712,14 +762,6 @@ void Widget::on_action_rename_playlist_triggered()
                                        QLineEdit::Normal, prevTitle, &ok);
     if(!ok) return;
     ui->tabWidget->setTabText(tab_index, title);
-}
-
-void Widget::on_btnQuit_clicked()
-{
-    auto answer = QMessageBox::question(this, "Confirm exit, please",
-                                        "Do you really want to quit?",
-                                        QMessageBox::Yes | QMessageBox::No);
-    if(answer == QMessageBox::Yes) this->close();
 }
 
 void Widget::on_action_add_music_from_other_playlist_triggered()
@@ -760,4 +802,12 @@ void Widget::on_action_next_track_triggered()
 void Widget::on_action_quit_triggered()
 {
     ui->btnQuit->click();
+}
+
+void Widget::on_btnQuit_clicked()
+{
+    auto answer = QMessageBox::question(this, "Confirm exit, please",
+                                        "Do you really want to quit?",
+                                        QMessageBox::Yes | QMessageBox::No);
+    if(answer == QMessageBox::Yes) this->close();
 }
